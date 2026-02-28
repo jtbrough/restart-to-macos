@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+PREFIX=${PREFIX:-/usr/local}
+
+usage() {
+  cat <<EOF
+Usage: restart-to-macos-uninstall [--prefix PATH]
+EOF
+}
+
+fail() {
+  printf 'Error: %s\n' "$*" >&2
+  exit 1
+}
+
+parse_args() {
+  while [[ $# -gt 0 ]]; do
+    case $1 in
+      --prefix)
+        [[ $# -ge 2 ]] || fail "--prefix requires a value"
+        PREFIX=$2
+        shift 2
+        ;;
+      -h|--help)
+        usage
+        exit 0
+        ;;
+      *)
+        fail "unknown argument: $1"
+        ;;
+    esac
+  done
+}
+
+require_root() {
+  if [[ $(id -u) -eq 0 ]]; then
+    return
+  fi
+
+  exec sudo PREFIX="$PREFIX" bash "$0" "$@"
+}
+
+main() {
+  local datadir metadir manifest version_file applications_dir path
+
+  parse_args "$@"
+  require_root "$@"
+
+  PREFIX=${PREFIX%/}
+  datadir="$PREFIX/share"
+  metadir="$datadir/restart-to-macos"
+  manifest="$metadir/install-manifest.txt"
+  version_file="$metadir/installed-version.txt"
+  applications_dir="$datadir/applications"
+
+  if [[ ! -f "$manifest" ]]; then
+    fail "no install manifest found at $manifest"
+  fi
+
+  while IFS= read -r path; do
+    [[ -n "$path" ]] || continue
+    rm -f -- "$path"
+  done <"$manifest"
+
+  rm -f -- "$manifest" "$version_file"
+  rmdir --ignore-fail-on-non-empty "$metadir" 2>/dev/null || true
+
+  if [[ -d "$applications_dir" ]] && command -v update-desktop-database >/dev/null 2>&1; then
+    update-desktop-database "$applications_dir" >/dev/null 2>&1 || true
+  fi
+}
+
+main "$@"

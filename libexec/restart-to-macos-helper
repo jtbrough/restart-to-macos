@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ASAHI_BLESS=${ASAHI_BLESS:-/usr/bin/asahi-bless}
+SYSTEMCTL=${SYSTEMCTL:-/usr/bin/systemctl}
+
+if [[ ! -x "$ASAHI_BLESS" ]]; then
+  printf '%s\n' "asahi-bless is not installed at $ASAHI_BLESS." >&2
+  exit 1
+fi
+
+if [[ ! -x "$SYSTEMCTL" ]]; then
+  printf '%s\n' "systemctl is not installed at $SYSTEMCTL." >&2
+  exit 1
+fi
+
+"$ASAHI_BLESS" --next --set-boot-macos -y
+exec "$SYSTEMCTL" reboot

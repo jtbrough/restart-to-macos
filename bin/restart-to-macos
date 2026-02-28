@@ -1,0 +1,216 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ASAHI_BLESS=${ASAHI_BLESS:-/usr/bin/asahi-bless}
+PKEXEC=${PKEXEC:-/usr/bin/pkexec}
+SYSTEMCTL=${SYSTEMCTL:-/usr/bin/systemctl}
+
+show_error() {
+  local message=$1
+
+  if command -v zenity >/dev/null 2>&1; then
+    zenity --error --width=360 --text="$message" >/dev/null 2>&1 || true
+    return
+  fi
+
+  if command -v kdialog >/dev/null 2>&1; then
+    kdialog --error "$message" >/dev/null 2>&1 || true
+    return
+  fi
+
+  printf '%s\n' "$message" >&2
+}
+
+show_info() {
+  local message=$1
+
+  if command -v zenity >/dev/null 2>&1; then
+    zenity --info --width=420 --text="$message" >/dev/null 2>&1 || true
+    return
+  fi
+
+  if command -v kdialog >/dev/null 2>&1; then
+    kdialog --msgbox "$message" >/dev/null 2>&1 || true
+    return
+  fi
+
+  printf '%s\n' "$message"
+}
+
+confirm_reboot() {
+  local message=$1
+
+  if command -v zenity >/dev/null 2>&1; then
+    zenity --question --width=420 --text="$message" >/dev/null 2>&1
+    return $?
+  fi
+
+  if command -v kdialog >/dev/null 2>&1; then
+    kdialog --title "Restart to macOS" --warningyesno "$message" >/dev/null 2>&1
+    return $?
+  fi
+
+  show_error "No supported GUI confirmation tool was found. Install zenity or kdialog."
+  return 1
+}
+
+usage() {
+  cat <<EOF
+Usage: restart-to-macos [--check]
+
+Options:
+  --check    Validate required dependencies and installation paths
+  -h, --help Show this help
+EOF
+}
+
+detect_package_hint() {
+  local dep=$1
+
+  if command -v dnf >/dev/null 2>&1; then
+    case $dep in
+      asahi-bless)
+        printf '%s\n' "Install it with: sudo dnf install asahi-bless"
+        return
+        ;;
+      pkexec)
+        printf '%s\n' "Install it with: sudo dnf install polkit"
+        return
+        ;;
+      systemctl)
+        printf '%s\n' "Install it with: sudo dnf install systemd"
+        return
+        ;;
+    esac
+  fi
+
+  if command -v pacman >/dev/null 2>&1; then
+    case $dep in
+      asahi-bless)
+        printf '%s\n' "Install it with: sudo pacman -S asahi-bless"
+        return
+        ;;
+      pkexec)
+        printf '%s\n' "Install it with: sudo pacman -S polkit"
+        return
+        ;;
+      systemctl)
+        printf '%s\n' "Install it with: sudo pacman -S systemd"
+        return
+        ;;
+    esac
+  fi
+
+  case $dep in
+    asahi-bless)
+      printf '%s\n' "Install the asahi-bless package from your distro or Asahi repository."
+      ;;
+    pkexec)
+      printf '%s\n' "Install polkit so pkexec is available."
+      ;;
+    systemctl)
+      printf '%s\n' "This launcher requires a systemd-based system."
+      ;;
+  esac
+}
+
+dependency_report() {
+  local helper=$1
+  local missing=0
+  local report=""
+
+  if [[ -x "$helper" ]]; then
+    report+="OK: helper found at $helper"$'\n'
+  else
+    report+="MISSING: helper not found at $helper"$'\n'
+    missing=1
+  fi
+
+  if [[ -x "$ASAHI_BLESS" ]]; then
+    report+="OK: asahi-bless found at $ASAHI_BLESS"$'\n'
+  else
+    report+="MISSING: asahi-bless not found at $ASAHI_BLESS"$'\n'
+    report+="$(detect_package_hint asahi-bless)"$'\n'
+    missing=1
+  fi
+
+  if [[ -x "$PKEXEC" ]]; then
+    report+="OK: pkexec found at $PKEXEC"$'\n'
+  else
+    report+="MISSING: pkexec not found at $PKEXEC"$'\n'
+    report+="$(detect_package_hint pkexec)"$'\n'
+    missing=1
+  fi
+
+  if [[ -x "$SYSTEMCTL" ]]; then
+    report+="OK: systemctl found at $SYSTEMCTL"$'\n'
+  else
+    report+="MISSING: systemctl not found at $SYSTEMCTL"$'\n'
+    report+="$(detect_package_hint systemctl)"$'\n'
+    missing=1
+  fi
+
+  if command -v zenity >/dev/null 2>&1; then
+    report+="OK: zenity found for GUI prompts"$'\n'
+  elif command -v kdialog >/dev/null 2>&1; then
+    report+="OK: kdialog found for GUI prompts"$'\n'
+  else
+    report+="MISSING: no GUI confirmation tool found"$'\n'
+    report+="Install zenity or kdialog to use the desktop launcher safely."$'\n'
+    missing=1
+  fi
+
+  printf '%s' "$report"
+  return "$missing"
+}
+
+main() {
+  local script_dir prefix helper report mode=run
+
+  script_dir=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
+  prefix=$(CDPATH='' cd -- "$script_dir/.." && pwd)
+  helper="$prefix/libexec/restart-to-macos-helper"
+
+  while [[ $# -gt 0 ]]; do
+    case $1 in
+      --check)
+        mode=check
+        shift
+        ;;
+      -h|--help)
+        usage
+        exit 0
+        ;;
+      *)
+        show_error "Unknown argument: $1"
+        exit 1
+        ;;
+    esac
+  done
+
+  report=$(dependency_report "$helper") || true
+
+  if [[ "$mode" == "check" ]]; then
+    show_info "$report"
+    if [[ "$report" == *"MISSING:"* ]]; then
+      exit 1
+    fi
+    exit 0
+  fi
+
+  if [[ "$report" == *"MISSING:"* ]]; then
+    show_error "$report"
+    exit 1
+  fi
+
+  if ! confirm_reboot "Set the next boot to macOS and restart now?"; then
+    exit 0
+  fi
+
+  if ! "$PKEXEC" "$helper"; then
+    show_error "Failed to set the next boot target to macOS and restart."
+    exit 1
+  fi
+}
+
+main "$@"

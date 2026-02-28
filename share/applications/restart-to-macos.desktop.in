@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Restart to macOS
+Comment=Set the next boot target to macOS and reboot
+Exec=@BINDIR@/restart-to-macos
+Icon=system-reboot
+Terminal=false
+StartupNotify=true
+Categories=System;
+Keywords=Asahi;macOS;reboot;

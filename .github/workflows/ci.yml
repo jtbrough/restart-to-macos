@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  lint-and-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install test tools
+        run: sudo apt-get update && sudo apt-get install -y just shellcheck desktop-file-utils libxml2-utils
+      - name: Run lint and staged tests
+        run: just ci
+
+  arch-package:
+    runs-on: ubuntu-latest
+    container: archlinux:base-devel
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build tools
+        run: pacman -Sy --noconfirm git sed grep fakeroot just
+      - name: Build package
+        run: just build-arch
+
+  fedora-package:
+    runs-on: ubuntu-latest
+    container: fedora:41
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build tools
+        run: dnf install -y just rpm-build tar gzip findutils
+      - name: Build RPM
+        run: just build-fedora

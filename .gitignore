@@ -1,0 +1,13 @@
+*.tar
+*.tar.gz
+*.tar.xz
+*.rpm
+*.src.rpm
+pkg/
+src/
+results/
+dist/
+*.log
+*.pkg.tar
+*.pkg.tar.zst
+.tmp/

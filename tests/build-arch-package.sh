@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+PROJECT_ROOT=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
+VERSION=$(<"$PROJECT_ROOT/VERSION")
+PARENT_TMPDIR=${TMPDIR:-/tmp}
+TMP_ROOT=$(mktemp -d "$PARENT_TMPDIR/restart-to-macos-arch.XXXXXX")
+trap 'rm -rf -- "$TMP_ROOT"' EXIT
+
+STAGE="$TMP_ROOT/restart-to-macos-$VERSION"
+PKGDIR="$TMP_ROOT/pkg"
+SRCDEST="$TMP_ROOT/src"
+
+mkdir -p "$PKGDIR" "$SRCDEST"
+cp -a "$PROJECT_ROOT/." "$STAGE"
+rm -rf "$STAGE/.git"
+tar -C "$TMP_ROOT" -czf "$SRCDEST/restart-to-macos-$VERSION.tar.gz" "restart-to-macos-$VERSION"
+
+cp "$PROJECT_ROOT/packaging/arch/PKGBUILD" "$PKGDIR/PKGBUILD"
+sed -i "s|^source=.*|source=('restart-to-macos-$VERSION.tar.gz')|" "$PKGDIR/PKGBUILD"
+sed -i "s|^sha256sums=.*|sha256sums=('SKIP')|" "$PKGDIR/PKGBUILD"
+
+if [[ $(id -u) -eq 0 ]]; then
+  useradd -m -u 1000 builder >/dev/null 2>&1 || true
+  chown -R builder:builder "$TMP_ROOT"
+  su builder -c "cd '$PKGDIR' && SRCDEST='$SRCDEST' PKGDEST='$TMP_ROOT/out' makepkg --nodeps --force --cleanbuild"
+else
+  cd "$PKGDIR"
+  SRCDEST="$SRCDEST" PKGDEST="$TMP_ROOT/out" makepkg --nodeps --force --cleanbuild
+fi
+
+find "$TMP_ROOT/out" -maxdepth 1 -type f -name '*.pkg.tar*' | grep -q .
+printf 'Arch package build succeeded\n'

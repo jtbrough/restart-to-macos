@@ -1,0 +1,17 @@
+pkgname=restart-to-macos
+pkgver=0.1.0
+pkgrel=1
+pkgdesc='One-time restart into macOS for Asahi Linux systems'
+arch=('any')
+url='https://github.com/jtbrough/restart-to-macos'
+license=('MIT')
+depends=('asahi-bless' 'polkit' 'systemd')
+optdepends=('zenity: GNOME dialog prompts' 'kdialog: KDE dialog prompts')
+source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
+sha256sums=('SKIP')
+
+package() {
+  cd "$srcdir/$pkgname-$pkgver"
+  ./install.sh --destdir "$pkgdir" --prefix /usr --package-build
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}
