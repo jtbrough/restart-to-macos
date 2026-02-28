@@ -247,7 +247,10 @@ jobs:
           cd homebrew-tap
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git diff --quiet -- Formula/restart-to-macos.rb && exit 0
           git add Formula/restart-to-macos.rb
-          git commit -m "feat: update restart-to-macos to ${{ needs.prepare.outputs.version }}"
+          if git diff --cached --quiet -- Formula/restart-to-macos.rb; then
+            git commit --allow-empty -m "chore: sync restart-to-macos release ${{ needs.prepare.outputs.version }}"
+          else
+            git commit -m "feat: update restart-to-macos to ${{ needs.prepare.outputs.version }}"
+          fi
           git push origin HEAD
