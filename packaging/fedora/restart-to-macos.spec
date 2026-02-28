@@ -5,7 +5,7 @@ Summary:        One-time restart into macOS for Asahi Linux systems
 
 License:        MIT
 URL:            https://github.com/jtbrough/restart-to-macos
-Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz
+Source0:        %{url}/releases/download/v%{version}/%{name}-%{version}.tar.gz
 
 BuildArch:      noarch
 

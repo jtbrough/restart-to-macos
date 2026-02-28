@@ -5,7 +5,7 @@ PROJECT_ROOT=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
 VERSION=$(<"$PROJECT_ROOT/VERSION")
 PKGBUILD="$PROJECT_ROOT/packaging/arch/PKGBUILD"
 REPO_URL="https://github.com/jtbrough/restart-to-macos"
-TARBALL_URL="$REPO_URL/archive/refs/tags/v$VERSION.tar.gz"
+TARBALL_URL="$REPO_URL/releases/download/v$VERSION/restart-to-macos-$VERSION.tar.gz"
 
 TMP_ROOT=$(mktemp -d)
 trap 'rm -rf -- "$TMP_ROOT"' EXIT

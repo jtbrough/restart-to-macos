@@ -7,7 +7,7 @@ url='https://github.com/jtbrough/restart-to-macos'
 license=('MIT')
 depends=('asahi-bless' 'polkit' 'systemd')
 optdepends=('zenity: GNOME dialog prompts' 'kdialog: KDE dialog prompts')
-source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
+source=("$pkgname-$pkgver.tar.gz::$url/releases/download/v$pkgver/$pkgname-$pkgver.tar.gz")
 sha256sums=('SKIP')
 
 package() {
