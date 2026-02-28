@@ -19,6 +19,7 @@ jobs:
       release_sha: ${{ steps.meta.outputs.release_sha }}
       archive_name: ${{ steps.meta.outputs.archive_name }}
       archive_sha256: ${{ steps.meta.outputs.archive_sha256 }}
+      has_tap_token: ${{ steps.tap-token.outputs.has_tap_token }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -79,6 +80,16 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git tag "${{ steps.meta.outputs.tag }}" "${{ steps.meta.outputs.release_sha }}"
           git push origin "${{ steps.meta.outputs.tag }}"
+      - name: Check tap token
+        id: tap-token
+        env:
+          TAP_GITHUB_TOKEN: ${{ secrets.TAP_GITHUB_TOKEN }}
+        run: |
+          if [[ -n "$TAP_GITHUB_TOKEN" ]]; then
+            echo "has_tap_token=true" >>"$GITHUB_OUTPUT"
+          else
+            echo "has_tap_token=false" >>"$GITHUB_OUTPUT"
+          fi
 
   build-arch:
     runs-on: ubuntu-latest
@@ -208,6 +219,7 @@ jobs:
 
   update-homebrew-tap:
     runs-on: ubuntu-latest
+    if: ${{ needs.prepare.outputs.has_tap_token == 'true' }}
     needs:
       - prepare
       - publish-release
@@ -217,23 +229,13 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ needs.prepare.outputs.release_sha }}
-      - name: Check tap token
-        id: tap-token
-        run: |
-          if [[ -z "$TAP_GITHUB_TOKEN" ]]; then
-            echo "skip=true" >>"$GITHUB_OUTPUT"
-          else
-            echo "skip=false" >>"$GITHUB_OUTPUT"
-          fi
       - name: Check out tap repo
-        if: steps.tap-token.outputs.skip != 'true'
         uses: actions/checkout@v4
         with:
           repository: jtbrough/homebrew-tap
           token: ${{ secrets.TAP_GITHUB_TOKEN }}
           path: homebrew-tap
       - name: Render formula
-        if: steps.tap-token.outputs.skip != 'true'
         run: |
           mkdir -p homebrew-tap/Formula
           scripts/render-brew-formula.sh \
@@ -241,7 +243,6 @@ jobs:
             "${{ needs.prepare.outputs.archive_sha256 }}" \
             > homebrew-tap/Formula/restart-to-macos.rb
       - name: Commit and push tap update
-        if: steps.tap-token.outputs.skip != 'true'
         run: |
           cd homebrew-tap
           git config user.name "github-actions[bot]"
