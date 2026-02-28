@@ -49,6 +49,13 @@ EOF
   chmod +x "$dir/zenity"
 }
 
+make_fake_shell_runtime() {
+  local dir=$1
+  mkdir -p "$dir"
+  ln -sf /usr/bin/bash "$dir/bash"
+  ln -sf /usr/bin/dirname "$dir/dirname"
+}
+
 test_manual_install_layout() {
   local dest="$TMP_ROOT/manual"
   "$PROJECT_ROOT/install.sh" --destdir "$dest" --prefix /usr/local >/dev/null
@@ -133,20 +140,42 @@ test_health_check_fails_without_gui() {
   local fakebin="$TMP_ROOT/check-no-gui-bin"
   local output="$TMP_ROOT/check-no-gui.out"
   "$PROJECT_ROOT/install.sh" --destdir "$dest" --prefix /usr/local >/dev/null
-  mkdir -p "$fakebin"
+  make_fake_shell_runtime "$fakebin"
   touch "$fakebin/asahi-bless" "$fakebin/pkexec" "$fakebin/systemctl"
   chmod +x "$fakebin/asahi-bless" "$fakebin/pkexec" "$fakebin/systemctl"
 
   if ASAHI_BLESS="$fakebin/asahi-bless" \
     PKEXEC="$fakebin/pkexec" \
     SYSTEMCTL="$fakebin/systemctl" \
-    PATH="$fakebin:/usr/bin:/bin" \
+    PATH="$fakebin" \
     "$dest/usr/local/bin/restart-to-macos" --check >"$output" 2>&1; then
     fail "expected health check to fail without a GUI dialog backend"
   fi
 
   grep -Fq "Install zenity or kdialog" "$output" || fail "missing GUI guidance in health check output"
   pass "health check fails without gui"
+}
+
+test_symlinked_command_resolves_helper() {
+  local dest="$TMP_ROOT/check-symlink"
+  local fakebin="$TMP_ROOT/check-symlink-bin"
+  local linked_prefix="$TMP_ROOT/linked-prefix"
+  "$PROJECT_ROOT/install.sh" --destdir "$dest" --prefix /opt/restart-to-macos --package-build >/dev/null
+  make_fake_gui "$fakebin"
+  ln -sf /usr/bin/bash "$fakebin/bash"
+  ln -sf /usr/bin/dirname "$fakebin/dirname"
+  touch "$fakebin/asahi-bless" "$fakebin/pkexec" "$fakebin/systemctl"
+  chmod +x "$fakebin/asahi-bless" "$fakebin/pkexec" "$fakebin/systemctl"
+  mkdir -p "$linked_prefix/bin"
+  ln -sf "$dest/opt/restart-to-macos/bin/restart-to-macos" "$linked_prefix/bin/restart-to-macos"
+
+  ASAHI_BLESS="$fakebin/asahi-bless" \
+  PKEXEC="$fakebin/pkexec" \
+  SYSTEMCTL="$fakebin/systemctl" \
+  PATH="$fakebin:$PATH" \
+  "$linked_prefix/bin/restart-to-macos" --check >/dev/null
+
+  pass "symlinked command resolves helper"
 }
 
 test_desktop_and_policy_templates() {
@@ -166,6 +195,7 @@ main() {
   test_manual_update_and_uninstall
   test_health_check_success
   test_health_check_fails_without_gui
+  test_symlinked_command_resolves_helper
   test_desktop_and_policy_templates
 }
 

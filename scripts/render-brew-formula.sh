@@ -38,6 +38,9 @@ class RestartToMacos < Formula
 
   def install
     system "./install.sh", "--prefix", prefix, "--package-build", "--no-polkit"
+    inreplace share/"applications"/"restart-to-macos.desktop",
+      /^Exec=.*/,
+      "Exec=#{opt_bin}/restart-to-macos"
   end
 
   def caveats
