@@ -1,5 +1,5 @@
 pkgname=restart-to-macos
-pkgver=0.1.2
+pkgver=0.1.3
 pkgrel=1
 pkgdesc='One-time restart into macOS for Asahi Linux systems'
 arch=('any')

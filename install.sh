@@ -34,12 +34,29 @@ fail() {
   exit 1
 }
 
+find_writable_probe() {
+  local path=$1
+
+  while [[ "$path" != "/" && ! -e "$path" ]]; do
+    path=$(dirname -- "$path")
+  done
+
+  printf '%s\n' "$path"
+}
+
 require_root_if_needed() {
+  local probe
+
   if [[ $(id -u) -eq 0 ]]; then
     return
   fi
 
   if [[ -n "$DESTDIR" ]]; then
+    return
+  fi
+
+  probe=$(find_writable_probe "$INSTALL_ROOT")
+  if [[ -w "$probe" ]]; then
     return
   fi
 
@@ -238,8 +255,8 @@ do_install() {
 
 main() {
   parse_args "$@"
-  require_root_if_needed "$@"
   setup_paths
+  require_root_if_needed "$@"
   report_mode
 
   if [[ "$DO_UNINSTALL" -eq 1 ]]; then

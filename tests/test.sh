@@ -99,6 +99,17 @@ test_no_polkit_install() {
   pass "no-polkit install"
 }
 
+test_writable_prefix_install_without_sudo() {
+  local prefix="$TMP_ROOT/brew-prefix/Cellar/restart-to-macos/$VERSION"
+
+  "$PROJECT_ROOT/install.sh" --prefix "$prefix" --package-build --no-polkit >/dev/null
+
+  assert_file "$prefix/bin/restart-to-macos"
+  assert_file "$prefix/libexec/restart-to-macos-helper"
+  assert_file "$prefix/share/applications/restart-to-macos.desktop"
+  pass "writable prefix install without sudo"
+}
+
 test_manual_update_and_uninstall() {
   local work="$TMP_ROOT/update-src"
   local dest="$TMP_ROOT/update-dest"
@@ -192,6 +203,7 @@ main() {
   test_manual_install_layout
   test_package_build_layout
   test_no_polkit_install
+  test_writable_prefix_install_without_sudo
   test_manual_update_and_uninstall
   test_health_check_success
   test_health_check_fails_without_gui
