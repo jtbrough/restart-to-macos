@@ -63,6 +63,7 @@ main() {
 
   parse_args "$@"
   require_tools
+  "$PROJECT_ROOT/scripts/sync-version.sh"
 
   tarball="$TMP_ROOT/restart-to-macos-$VERSION.tar.gz"
   download_tarball "$tarball"

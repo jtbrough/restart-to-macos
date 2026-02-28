@@ -3,6 +3,10 @@ name: Release
 on:
   workflow_dispatch:
 
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 permissions:
   contents: write
 
@@ -12,27 +16,55 @@ jobs:
     outputs:
       version: ${{ steps.meta.outputs.version }}
       tag: ${{ steps.meta.outputs.tag }}
+      release_sha: ${{ steps.meta.outputs.release_sha }}
       archive_name: ${{ steps.meta.outputs.archive_name }}
       archive_sha256: ${{ steps.meta.outputs.archive_sha256 }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Compute release metadata
+      - name: Resolve release version
         id: meta
         run: |
-          version="$(cat VERSION)"
-          tag="v${version}"
-          archive_name="restart-to-macos-${version}.tar.gz"
-          git rev-parse --verify "$tag" >/dev/null 2>&1 && {
-            echo "Tag $tag already exists" >&2
-            exit 1
+          bump_patch() {
+            local major minor patch
+            IFS=. read -r major minor patch <<<"$1"
+            [[ "$major" =~ ^[0-9]+$ && "$minor" =~ ^[0-9]+$ && "$patch" =~ ^[0-9]+$ ]] || {
+              echo "VERSION must be MAJOR.MINOR.PATCH" >&2
+              exit 1
+            }
+            printf '%s.%s.%s\n' "$major" "$minor" "$((patch + 1))"
           }
-          git archive --format=tar.gz --prefix="restart-to-macos-${version}/" HEAD > "$archive_name"
+
+          version="$(cat VERSION)"
+          while git ls-remote --exit-code --tags origin "refs/tags/v${version}" >/dev/null 2>&1; do
+            version="$(bump_patch "$version")"
+          done
+
+          if [[ "$(cat VERSION)" != "$version" ]]; then
+            printf '%s\n' "$version" > VERSION
+          fi
+
+          scripts/sync-version.sh
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if ! git diff --quiet -- VERSION packaging/arch/PKGBUILD packaging/fedora/restart-to-macos.spec; then
+            git add VERSION packaging/arch/PKGBUILD packaging/fedora/restart-to-macos.spec
+            git commit -m "chore: prepare release v${version}"
+            git push origin HEAD:main
+          fi
+
+          tag="v${version}"
+          release_sha="$(git rev-parse HEAD)"
+          archive_name="restart-to-macos-${version}.tar.gz"
+          git archive --format=tar.gz --prefix="restart-to-macos-${version}/" "$release_sha" > "$archive_name"
           archive_sha256="$(sha256sum "$archive_name" | awk '{print $1}')"
           {
             echo "version=$version"
             echo "tag=$tag"
+            echo "release_sha=$release_sha"
             echo "archive_name=$archive_name"
             echo "archive_sha256=$archive_sha256"
           } >>"$GITHUB_OUTPUT"
@@ -45,7 +77,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag "${{ steps.meta.outputs.tag }}"
+          git tag "${{ steps.meta.outputs.tag }}" "${{ steps.meta.outputs.release_sha }}"
           git push origin "${{ steps.meta.outputs.tag }}"
 
   build-arch:
@@ -54,6 +86,8 @@ jobs:
     container: archlinux:base-devel
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.release_sha }}
       - uses: actions/download-artifact@v4
         with:
           name: source-archive
@@ -64,6 +98,7 @@ jobs:
         run: |
           mkdir -p out pkg
           cp packaging/arch/PKGBUILD pkg/PKGBUILD
+          sed -i "s|^pkgver=.*|pkgver=${{ needs.prepare.outputs.version }}|" pkg/PKGBUILD
           sed -i "s|^source=.*|source=('${{ needs.prepare.outputs.archive_name }}')|" pkg/PKGBUILD
           sed -i "s|^sha256sums=.*|sha256sums=('${{ needs.prepare.outputs.archive_sha256 }}')|" pkg/PKGBUILD
           mv "source-archive/${{ needs.prepare.outputs.archive_name }}" pkg/
@@ -82,6 +117,8 @@ jobs:
     container: fedora:41
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.release_sha }}
       - uses: actions/download-artifact@v4
         with:
           name: source-archive
@@ -91,12 +128,15 @@ jobs:
       - name: Build RPM
         run: |
           topdir="$(mktemp -d)"
-          mkdir -p "$topdir"/{BUILD,BUILDROOT,RPMS,SRPMS,SOURCES,SPECS}
+          tmppath="$topdir/tmp"
+          mkdir -p "$topdir"/{BUILD,BUILDROOT,RPMS,SRPMS,SOURCES,SPECS} "$tmppath"
           mv "source-archive/${{ needs.prepare.outputs.archive_name }}" "$topdir/SOURCES/"
           cp packaging/fedora/restart-to-macos.spec "$topdir/SPECS/"
+          sed -i "s/^Version:[[:space:]]*.*/Version:        ${{ needs.prepare.outputs.version }}/" "$topdir/SPECS/restart-to-macos.spec"
           rpmbuild -ba \
             --define "_topdir $topdir" \
             --define "_sourcedir $topdir/SOURCES" \
+            --define "_tmppath $tmppath" \
             "$topdir/SPECS/restart-to-macos.spec"
           mkdir -p out
           cp "$topdir"/RPMS/noarch/*.rpm out/restart-to-macos.noarch.rpm
@@ -113,6 +153,8 @@ jobs:
       - build-fedora
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.release_sha }}
       - uses: actions/download-artifact@v4
         with:
           name: source-archive
@@ -173,6 +215,8 @@ jobs:
       TAP_GITHUB_TOKEN: ${{ secrets.TAP_GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.release_sha }}
       - name: Check tap token
         id: tap-token
         run: |

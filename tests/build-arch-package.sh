@@ -17,6 +17,7 @@ rm -rf "$STAGE/.git"
 tar -C "$TMP_ROOT" -czf "$SRCDEST/restart-to-macos-$VERSION.tar.gz" "restart-to-macos-$VERSION"
 
 cp "$PROJECT_ROOT/packaging/arch/PKGBUILD" "$PKGDIR/PKGBUILD"
+sed -i "s|^pkgver=.*|pkgver=$VERSION|" "$PKGDIR/PKGBUILD"
 sed -i "s|^source=.*|source=('restart-to-macos-$VERSION.tar.gz')|" "$PKGDIR/PKGBUILD"
 sed -i "s|^sha256sums=.*|sha256sums=('SKIP')|" "$PKGDIR/PKGBUILD"
 

@@ -48,18 +48,3 @@ just build-arch
 just build-fedora
 just prepare-release
 ```
-
-- `just lint`: `shellcheck` and `actionlint`
-- `just validate`: rendered desktop entry validation and polkit XML validation
-- `just test`: staged install and health-check tests
-- `just ci`: local equivalent of the main CI lint/validate/test flow
-- `just build-arch`: Arch package smoke build
-- `just build-fedora`: Fedora RPM smoke build
-- `just prepare-release`: update the Arch release checksum from the GitHub tag tarball
-
-Release workflow:
-
-- tags `VERSION`
-- publishes source, Arch, and Fedora release assets
-- updates the Arch checksum in `packaging/arch/PKGBUILD`
-- updates the Homebrew tap when `TAP_GITHUB_TOKEN` is configured

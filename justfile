@@ -5,7 +5,7 @@ default:
 
 lint:
   shellcheck install.sh bin/restart-to-macos bin/restart-to-macos-uninstall libexec/restart-to-macos-helper tests/*.sh scripts/*.sh
-  actionlint .github/workflows/ci.yml
+  actionlint .github/workflows/ci.yml .github/workflows/release.yml
 
 validate-desktop:
   tmpdir="$(mktemp -d)"; trap 'rm -rf -- "$tmpdir"' EXIT; ./install.sh --destdir "$tmpdir" --prefix /usr --package-build; desktop-file-validate "$tmpdir/usr/share/applications/restart-to-macos.desktop"
@@ -14,6 +14,7 @@ validate-policy:
   xmllint --noout share/polkit-1/actions/io.github.jtbrough.restart-to-macos.policy.in
 
 validate:
+  scripts/check-version-sync.sh
   just validate-desktop
   just validate-policy
 
