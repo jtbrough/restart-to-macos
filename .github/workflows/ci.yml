@@ -10,7 +10,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install test tools
-        run: sudo apt-get update && sudo apt-get install -y just shellcheck desktop-file-utils libxml2-utils
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y just shellcheck desktop-file-utils libxml2-utils
+          arch="$(uname -m)"
+          case "$arch" in
+            x86_64) actionlint_arch="amd64" ;;
+            aarch64|arm64) actionlint_arch="arm64" ;;
+            *)
+              echo "Unsupported architecture: $arch" >&2
+              exit 1
+              ;;
+          esac
+          version="1.7.7"
+          curl -fsSL "https://github.com/rhysd/actionlint/releases/download/v${version}/actionlint_${version}_linux_${actionlint_arch}.tar.gz" \
+            | tar -xz actionlint
+          sudo install -m 0755 actionlint /usr/local/bin/actionlint
       - name: Run lint and staged tests
         run: just ci
 

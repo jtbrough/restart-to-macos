@@ -2,57 +2,26 @@
 
 Cross-desktop launcher for Asahi Linux users who want a one-time restart into macOS.
 
-The project installs:
+## Install
 
-- `restart-to-macos` in `bin/`
-- `restart-to-macos-uninstall` in `bin/`
-- `restart-to-macos-helper` in `libexec/`
-- `restart-to-macos.desktop` in `share/applications/`
-- an optional polkit action in `share/polkit-1/actions/`
-
-The initial focus is a plain install script that:
-
-- installs system-wide under a prefix such as `/usr/local`
-- can be rerun safely
-- replaces existing files in place when updating to a new release
-- can uninstall what it installed
-
-## Dependencies
-
-Required:
+Required host packages:
 
 - `asahi-bless`
 - `polkit` providing `pkexec`
 - `systemd` providing `systemctl`
 
-Required for desktop launcher use:
+Required for interactive desktop use:
 
 - `zenity` or `kdialog`
 
-Package guidance:
+Typical dependency install:
 
 - Fedora Asahi: `sudo dnf install asahi-bless polkit systemd zenity`
 - Arch/Asahi Arch: `sudo pacman -S asahi-bless polkit systemd zenity`
 
-`kdialog` can replace `zenity` if you prefer KDE-native dialogs.
+`kdialog` can replace `zenity` if you prefer KDE-native dialogs for prompts.
 
-## Health Check
-
-Use the built-in preflight check before installing or debugging:
-
-```bash
-restart-to-macos --check
-```
-
-The check verifies:
-
-- the installed helper path
-- `asahi-bless`
-- `pkexec`
-- `systemctl`
-- a supported GUI confirmation backend
-
-## Install
+Install with the bundled installer:
 
 ```bash
 ./install.sh
@@ -60,7 +29,7 @@ The check verifies:
 
 By default this installs under `/usr/local`.
 
-Useful options:
+Useful install options:
 
 ```bash
 ./install.sh --prefix /usr/local
@@ -68,63 +37,52 @@ Useful options:
 ./install.sh --uninstall
 ```
 
-For native package builds, the installer also supports:
-
-```bash
-./install.sh --destdir /path/to/stage --prefix /usr --package-build
-```
-
-`--package-build` skips the self-managed uninstall command and manifest files so
-native package managers remain the sole source of truth for installed files.
-
-## Uninstall
-
-```bash
-./install.sh --uninstall
-```
-
-Installed systems can also remove the project later with:
-
-```bash
-restart-to-macos-uninstall
-```
-
-## Packaging
-
-Packaging metadata lives under `packaging/`:
+If you prefer native packaging:
 
 - Arch: `packaging/arch/PKGBUILD`
 - Fedora: `packaging/fedora/restart-to-macos.spec`
 - Homebrew tap: `brew install jtbrough/tap/restart-to-macos`
 
-Both package definitions reuse `install.sh --destdir` so the manual install path
-and native package installs stay aligned.
+Homebrew is a convenience path, not the primary Linux packaging target. It still
+depends on distro-provided `asahi-bless`, `polkit`, `systemd`, and `zenity` or
+`kdialog`.
 
-Homebrew is a convenience install path, not the primary Linux packaging target.
-It still depends on distro-provided host packages such as `asahi-bless`,
-`polkit`, `systemd`, and `zenity` or `kdialog`.
+## Use
 
-Local package build helpers live under `tests/`:
-
-- `tests/build-arch-package.sh`
-- `tests/build-fedora-package.sh`
-
-Release prep helper:
-
-- `scripts/prepare-release.sh`
-
-Before publishing a release tag, run:
+Check the installed setup:
 
 ```bash
-scripts/prepare-release.sh
+restart-to-macos --check
 ```
 
-This downloads the GitHub tarball for `v$(cat VERSION)`, computes its SHA256,
-and updates `packaging/arch/PKGBUILD` with the real checksum.
+Run the launcher:
 
-## Task Runner
+```bash
+restart-to-macos
+```
 
-`just` provides the main local entrypoints:
+The launcher:
+
+- checks that the required helper and host dependencies exist
+- prompts for confirmation through `zenity` or `kdialog`
+- runs `asahi-bless --next --set-boot-macos`
+- reboots immediately
+
+Remove a manual install later with:
+
+```bash
+restart-to-macos-uninstall
+```
+
+Or:
+
+```bash
+./install.sh --uninstall
+```
+
+## Development
+
+Main local tasks:
 
 ```bash
 just lint
@@ -136,9 +94,6 @@ just build-fedora
 just prepare-release
 ```
 
-The underlying shell scripts remain the source of truth for packaging and test
-logic, and `just` only orchestrates them.
-
 Task breakdown:
 
 - `just lint`: `shellcheck` and `actionlint`
@@ -149,15 +104,16 @@ Task breakdown:
 - `just build-fedora`: Fedora RPM smoke build
 - `just prepare-release`: update the Arch release checksum from the GitHub tag tarball
 
-## Testing
-
-Run the staged install test suite with:
+For native package builds, the installer also supports:
 
 ```bash
-just test
+./install.sh --destdir /path/to/stage --prefix /usr --package-build
 ```
 
-The test suite covers:
+`--package-build` skips the self-managed uninstall command and manifest files so
+native package managers remain the sole source of truth for installed files.
+
+Staged tests cover:
 
 - manual install layout
 - package-build layout
