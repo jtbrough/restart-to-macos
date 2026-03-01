@@ -85,6 +85,17 @@ If `restart-to-macos --check` reports missing `asahi-bless`:
 
 ```bash
 restart-to-macos --check
+OK: helper found at /home/linuxbrew/.linuxbrew/Cellar/restart-to-macos/0.1.6/libexec/restart-to-macos-helper
+OK: asahi-bless found at /usr/bin/asahi-bless
+OK: pkexec found at /usr/bin/pkexec
+OK: systemctl found at /usr/bin/systemctl
+OK: kdialog found for GUI prompts
+OK: desktop file found at /home/linuxbrew/.linuxbrew/Cellar/restart-to-macos/0.1.6/share/applications/restart-to-macos.desktop
+OK: user launcher entry found at /home/<User>/.local/share/applications/restart-to-macos.desktop
+
+restart-to-macos --version
+0.1.6
+
 restart-to-macos
 ```
 
