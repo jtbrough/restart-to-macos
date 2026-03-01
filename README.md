@@ -11,6 +11,8 @@ brew tap jtbrough/tap
 brew install jtbrough/tap/restart-to-macos
 ```
 
+Brew also installs a launcher symlink in `~/.local/share/applications`.
+
 ### Arch
 
 ```bash
@@ -24,6 +26,8 @@ sudo pacman -U ./restart-to-macos.pkg.tar.zst
 curl -LO https://github.com/jtbrough/restart-to-macos/releases/latest/download/restart-to-macos.noarch.rpm
 sudo dnf install ./restart-to-macos.noarch.rpm
 ```
+
+Manual installs via `install.sh` also create a user-local launcher entry and remove it on uninstall.
 
 If `restart-to-macos --check` reports missing `asahi-bless`:
 

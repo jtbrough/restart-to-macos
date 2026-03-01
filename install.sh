@@ -74,6 +74,20 @@ render_template() {
     "$input" >"$output"
 }
 
+desktop_link_target() {
+  local target_user home_dir
+
+  if [[ -n "${SUDO_USER:-}" && "${SUDO_USER}" != "root" ]]; then
+    target_user=$SUDO_USER
+    home_dir=$(getent passwd "$target_user" | cut -d: -f6)
+  else
+    home_dir=${HOME:-}
+  fi
+
+  [[ -n "$home_dir" ]] || return 1
+  printf '%s\n' "$home_dir/.local/share/applications/$PROJECT_NAME.desktop"
+}
+
 write_manifest() {
   if [[ "$PACKAGE_BUILD" -eq 1 ]]; then
     return
@@ -87,6 +101,10 @@ write_manifest() {
     "$LIBEXECDIR/restart-to-macos-helper" \
     "$APPLICATIONS_DIR/restart-to-macos.desktop" \
     >"$MANIFEST_FILE"
+
+  if [[ -n "${DESKTOP_LINK_PATH:-}" && -L "$DESKTOP_LINK_PATH" ]]; then
+    printf '%s\n' "$DESKTOP_LINK_PATH" >>"$MANIFEST_FILE"
+  fi
 
   if [[ "$INSTALL_POLKIT" -eq 1 ]]; then
     printf '%s\n' "$POLKIT_DIR/io.github.jtbrough.restart-to-macos.policy" >>"$MANIFEST_FILE"
@@ -112,6 +130,25 @@ refresh_desktop_db() {
   if command -v update-desktop-database >/dev/null 2>&1; then
     update-desktop-database "$target_dir" >/dev/null 2>&1 || true
   fi
+}
+
+install_desktop_link() {
+  local link_path link_dir
+
+  if [[ -n "$DESTDIR" || "$PACKAGE_BUILD" -eq 1 ]]; then
+    return
+  fi
+
+  link_path=$(desktop_link_target) || return
+  link_dir=$(dirname -- "$link_path")
+  mkdir -p "$link_dir"
+
+  if [[ -e "$link_path" && ! -L "$link_path" ]]; then
+    return
+  fi
+
+  ln -sfn "$APPLICATIONS_DIR/restart-to-macos.desktop" "$link_path"
+  DESKTOP_LINK_PATH=$link_path
 }
 
 remove_manifest_files() {
@@ -239,6 +276,7 @@ do_install() {
     "$tmpdir/restart-to-macos.desktop"
   install_file 0644 "$tmpdir/restart-to-macos.desktop" \
     "$APPLICATIONS_DIR/restart-to-macos.desktop"
+  install_desktop_link
 
   if [[ "$INSTALL_POLKIT" -eq 1 ]]; then
     render_template "$SCRIPT_DIR/share/polkit-1/actions/io.github.jtbrough.restart-to-macos.policy.in" \

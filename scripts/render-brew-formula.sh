@@ -43,6 +43,40 @@ class RestartToMacos < Formula
       "Exec=#{opt_bin}/restart-to-macos"
   end
 
+  def post_install
+    applications_dir = Pathname.new(ENV.fetch("HOME")).join(".local", "share", "applications")
+    desktop_source = opt_share/"applications"/"restart-to-macos.desktop"
+    desktop_target = applications_dir/"restart-to-macos.desktop"
+
+    applications_dir.mkpath
+
+    return if desktop_target.exist? && !desktop_target.symlink?
+
+    if desktop_target.symlink?
+      begin
+        return if desktop_target.realpath == desktop_source.realpath
+      rescue Errno::ENOENT
+        nil
+      end
+      desktop_target.delete
+    end
+
+    desktop_target.make_symlink(desktop_source)
+  end
+
+  def uninstall
+    desktop_source = opt_share/"applications"/"restart-to-macos.desktop"
+    desktop_target = Pathname.new(ENV.fetch("HOME")).join(".local", "share", "applications", "restart-to-macos.desktop")
+
+    return unless desktop_target.symlink?
+
+    begin
+      desktop_target.delete if desktop_target.realpath == desktop_source.realpath
+    rescue Errno::ENOENT
+      desktop_target.delete if desktop_target.readlink == desktop_source
+    end
+  end
+
   def caveats
     <<~EOS
       restart-to-macos requires asahi-bless from your Linux distro.

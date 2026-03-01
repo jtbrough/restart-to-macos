@@ -110,6 +110,22 @@ test_writable_prefix_install_without_sudo() {
   pass "writable prefix install without sudo"
 }
 
+test_manual_install_creates_desktop_link() {
+  local prefix="$TMP_ROOT/manual-prefix"
+  local home="$TMP_ROOT/manual-home"
+  local link="$home/.local/share/applications/restart-to-macos.desktop"
+
+  HOME="$home" "$PROJECT_ROOT/install.sh" --prefix "$prefix" --no-polkit >/dev/null
+
+  [[ -L "$link" ]] || fail "expected desktop symlink: $link"
+  [[ "$(readlink "$link")" == "$prefix/share/applications/restart-to-macos.desktop" ]] || \
+    fail "unexpected desktop symlink target"
+
+  HOME="$home" "$PROJECT_ROOT/install.sh" --prefix "$prefix" --uninstall >/dev/null
+  assert_not_file "$link"
+  pass "manual install creates desktop link"
+}
+
 test_manual_update_and_uninstall() {
   local work="$TMP_ROOT/update-src"
   local dest="$TMP_ROOT/update-dest"
@@ -191,11 +207,16 @@ test_symlinked_command_resolves_helper() {
 
 test_desktop_and_policy_templates() {
   local dest="$TMP_ROOT/templates"
+  local formula="$TMP_ROOT/restart-to-macos.rb"
   "$PROJECT_ROOT/install.sh" --destdir "$dest" --prefix /opt/restart-to-macos >/dev/null
   assert_contains "$dest/opt/restart-to-macos/share/applications/restart-to-macos.desktop" \
     "Exec=/opt/restart-to-macos/bin/restart-to-macos"
   assert_contains "$dest/opt/restart-to-macos/share/polkit-1/actions/io.github.jtbrough.restart-to-macos.policy" \
     "/opt/restart-to-macos/libexec/restart-to-macos-helper"
+  "$PROJECT_ROOT/scripts/render-brew-formula.sh" "$VERSION" "deadbeef" >"$formula"
+  assert_contains "$formula" "def post_install"
+  assert_contains "$formula" "def uninstall"
+  assert_contains "$formula" 'desktop_target.make_symlink(desktop_source)'
   pass "template rendering"
 }
 
@@ -204,6 +225,7 @@ main() {
   test_package_build_layout
   test_no_polkit_install
   test_writable_prefix_install_without_sudo
+  test_manual_install_creates_desktop_link
   test_manual_update_and_uninstall
   test_health_check_success
   test_health_check_fails_without_gui
