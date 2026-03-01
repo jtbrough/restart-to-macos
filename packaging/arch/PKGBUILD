@@ -8,7 +8,7 @@ license=('MIT')
 depends=('asahi-bless' 'polkit' 'systemd')
 optdepends=('zenity: GNOME dialog prompts' 'kdialog: KDE dialog prompts')
 source=("$pkgname-$pkgver.tar.gz::$url/releases/download/v$pkgver/$pkgname-$pkgver.tar.gz")
-sha256sums=('a949c281b6ba37c5de49d52f1cbb25c4f5cb71119ebc3bcc622f278ffd909a30')
+sha256sums=('97b2c187e2e493263cd6fef60170ad934c513c08c503f42584896a2bb4c96c16')
 
 package() {
   cd "$srcdir/$pkgname-$pkgver"
