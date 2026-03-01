@@ -204,9 +204,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: main
           fetch-depth: 0
       - name: Update PKGBUILD checksum
         run: |
+          git fetch origin main
+          git checkout main
+          git reset --hard origin/main
           sed -i "s|^sha256sums=.*|sha256sums=('${{ needs.prepare.outputs.archive_sha256 }}')|" packaging/arch/PKGBUILD
       - name: Commit checksum update
         run: |
