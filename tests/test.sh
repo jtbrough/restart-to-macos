@@ -149,6 +149,7 @@ test_health_check_success() {
   local dest="$TMP_ROOT/check-ok"
   local fakebin="$TMP_ROOT/check-ok-bin"
   local home="$TMP_ROOT/check-ok-home"
+  local output="$TMP_ROOT/check-ok.out"
   "$PROJECT_ROOT/install.sh" --destdir "$dest" --prefix /usr/local >/dev/null
   make_fake_gui "$fakebin"
   touch "$fakebin/asahi-bless" "$fakebin/pkexec" "$fakebin/systemctl"
@@ -162,7 +163,10 @@ test_health_check_success() {
   SYSTEMCTL="$fakebin/systemctl" \
   HOME="$home" \
   PATH="$fakebin:$PATH" \
-  "$dest/usr/local/bin/restart-to-macos" --check >/dev/null
+  "$dest/usr/local/bin/restart-to-macos" --check >"$output"
+
+  grep -Fq "OK: helper found" "$output" || fail "missing health check output"
+  grep -Fq "OK: desktop file found" "$output" || fail "missing desktop status in health check output"
 
   pass "health check success"
 }
@@ -173,6 +177,8 @@ test_version_output() {
   "$PROJECT_ROOT/install.sh" --destdir "$dest" --prefix /usr/local >/dev/null
   output=$("$dest/usr/local/bin/restart-to-macos" --version)
   [[ "$output" == "$VERSION" ]] || fail "expected version $VERSION, got $output"
+  output=$("$dest/usr/local/bin/restart-to-macos" -v)
+  [[ "$output" == "$VERSION" ]] || fail "expected version $VERSION from -v, got $output"
   pass "version output"
 }
 

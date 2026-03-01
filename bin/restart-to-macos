@@ -60,7 +60,8 @@ Usage: restart-to-macos [--check] [--version]
 
 Options:
   --check    Validate required dependencies and installation paths
-  --version  Show the installed version
+  -v, --version
+             Show the installed version
   -h, --help Show this help
 EOF
 }
@@ -208,7 +209,7 @@ main() {
         mode=check
         shift
         ;;
-      --version|-V)
+      --version|-v|-V)
         mode=version
         shift
         ;;
@@ -235,7 +236,7 @@ main() {
   fi
 
   if [[ "$mode" == "check" ]]; then
-    show_info "$report"
+    printf '%s\n' "$report"
     if [[ "$report" == *"MISSING:"* ]]; then
       exit 1
     fi

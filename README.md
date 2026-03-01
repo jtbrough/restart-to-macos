@@ -6,28 +6,68 @@ Cross-desktop launcher for Asahi Linux users who want a one-time restart into ma
 
 ### Brew
 
+Install:
+
 ```bash
 brew tap jtbrough/tap
 brew install jtbrough/tap/restart-to-macos
+```
+
+Uninstall:
+
+```bash
+brew uninstall restart-to-macos
 ```
 
 Brew also installs a launcher symlink in `~/.local/share/applications`.
 
 ### Arch
 
+Install:
+
 ```bash
 curl -LO https://github.com/jtbrough/restart-to-macos/releases/latest/download/restart-to-macos.pkg.tar.zst
 sudo pacman -U ./restart-to-macos.pkg.tar.zst
 ```
 
+Uninstall:
+
+```bash
+sudo pacman -Rns restart-to-macos
+```
+
 ### Fedora
+
+Install:
 
 ```bash
 curl -LO https://github.com/jtbrough/restart-to-macos/releases/latest/download/restart-to-macos.noarch.rpm
 sudo dnf install ./restart-to-macos.noarch.rpm
 ```
 
-Manual installs via `install.sh` also create a user-local launcher entry and remove it on uninstall.
+Uninstall:
+
+```bash
+sudo dnf remove restart-to-macos
+```
+
+### Manual
+
+Install:
+
+```bash
+git clone https://github.com/jtbrough/restart-to-macos.git
+cd restart-to-macos
+./install.sh
+```
+
+Uninstall:
+
+```bash
+sudo /usr/local/bin/restart-to-macos-uninstall
+```
+
+Manual installs via `install.sh` create a user-local launcher entry and remove it on uninstall.
 
 If `restart-to-macos --check` reports missing `asahi-bless`:
 
