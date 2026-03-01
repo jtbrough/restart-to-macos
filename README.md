@@ -2,6 +2,13 @@
 
 Cross-desktop launcher for Asahi Linux users who want a one-time restart into macOS.
 
+## Disclaimer
+One could, of course, just do this via simple CLI:
+```bash
+asahi-bless --next --set-boot-macos -y && systemctl reboot
+```
+I built this small app because 1) it was fun. 2) I wanted to learn about Linux packaging. 3) I like the way it works.
+
 ## Install
 
 ### Brew
