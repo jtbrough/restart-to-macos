@@ -10,11 +10,27 @@ trap 'rm -rf -- "$TMP_ROOT"' EXIT
 PKGDIR="$TMP_ROOT/pkg"
 SRCDEST="$TMP_ROOT/src"
 
+create_source_archive() {
+  local output=$1
+  local stage
+
+  if command -v git >/dev/null 2>&1 && git -C "$PROJECT_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    git -C "$PROJECT_ROOT" archive \
+      --format=tar.gz \
+      --prefix="restart-to-macos-$VERSION/" \
+      HEAD >"$output"
+    return
+  fi
+
+  stage="$TMP_ROOT/restart-to-macos-$VERSION"
+  mkdir -p "$stage"
+  cp -a "$PROJECT_ROOT/." "$stage"
+  rm -rf "$stage/.git" "$stage/.tmp" "$stage/dist" "$stage/pkg" "$stage/results"
+  tar -C "$TMP_ROOT" -czf "$output" "restart-to-macos-$VERSION"
+}
+
 mkdir -p "$PKGDIR" "$SRCDEST"
-git -C "$PROJECT_ROOT" archive \
-  --format=tar.gz \
-  --prefix="restart-to-macos-$VERSION/" \
-  HEAD >"$SRCDEST/restart-to-macos-$VERSION.tar.gz"
+create_source_archive "$SRCDEST/restart-to-macos-$VERSION.tar.gz"
 
 cp "$PROJECT_ROOT/packaging/arch/PKGBUILD" "$PKGDIR/PKGBUILD"
 sed -i "s|^pkgver=.*|pkgver=$VERSION|" "$PKGDIR/PKGBUILD"
