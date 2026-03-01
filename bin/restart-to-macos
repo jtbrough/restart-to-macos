@@ -56,10 +56,11 @@ confirm_reboot() {
 
 usage() {
   cat <<EOF
-Usage: restart-to-macos [--check]
+Usage: restart-to-macos [--check] [--version]
 
 Options:
   --check    Validate required dependencies and installation paths
+  --version  Show the installed version
   -h, --help Show this help
 EOF
 }
@@ -116,8 +117,10 @@ detect_package_hint() {
 
 dependency_report() {
   local helper=$1
+  local prefix=$2
   local missing=0
   local report=""
+  local desktop_file desktop_link
 
   if [[ -x "$helper" ]]; then
     report+="OK: helper found at $helper"$'\n'
@@ -160,12 +163,32 @@ dependency_report() {
     missing=1
   fi
 
+  desktop_file="$prefix/share/applications/restart-to-macos.desktop"
+  desktop_link="${HOME:-}/.local/share/applications/restart-to-macos.desktop"
+
+  if [[ -f "$desktop_file" ]]; then
+    report+="OK: desktop file found at $desktop_file"$'\n'
+  else
+    report+="MISSING: desktop file not found at $desktop_file"$'\n'
+    missing=1
+  fi
+
+  if [[ -e "$desktop_link" ]]; then
+    report+="OK: user launcher entry found at $desktop_link"$'\n'
+  elif [[ "$prefix" == "/usr" || "$prefix" == "/usr/local" ]]; then
+    report+="OK: system application directory is in use ($prefix/share/applications)"$'\n'
+  else
+    report+="MISSING: no user launcher entry found at $desktop_link"$'\n'
+    report+="Create one by reinstalling or symlinking the desktop file into ~/.local/share/applications."$'\n'
+    missing=1
+  fi
+
   printf '%s' "$report"
   return "$missing"
 }
 
 main() {
-  local script_path script_dir prefix helper report mode=run
+  local script_path script_dir prefix helper report mode=run version_file
 
   script_path=$0
   if command -v realpath >/dev/null 2>&1; then
@@ -177,11 +200,16 @@ main() {
   script_dir=$(CDPATH='' cd -- "$(dirname -- "$script_path")" && pwd)
   prefix=$(CDPATH='' cd -- "$script_dir/.." && pwd)
   helper="$prefix/libexec/restart-to-macos-helper"
+  version_file="$prefix/share/restart-to-macos/VERSION"
 
   while [[ $# -gt 0 ]]; do
     case $1 in
       --check)
         mode=check
+        shift
+        ;;
+      --version|-V)
+        mode=version
         shift
         ;;
       -h|--help)
@@ -195,7 +223,16 @@ main() {
     esac
   done
 
-  report=$(dependency_report "$helper") || true
+  report=$(dependency_report "$helper" "$prefix") || true
+
+  if [[ "$mode" == "version" ]]; then
+    if [[ -f "$version_file" ]]; then
+      cat "$version_file"
+      exit 0
+    fi
+    show_error "Version metadata not found at $version_file"
+    exit 1
+  fi
 
   if [[ "$mode" == "check" ]]; then
     show_info "$report"

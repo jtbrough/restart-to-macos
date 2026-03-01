@@ -100,6 +100,7 @@ write_manifest() {
     "$BINDIR/restart-to-macos-uninstall" \
     "$LIBEXECDIR/restart-to-macos-helper" \
     "$APPLICATIONS_DIR/restart-to-macos.desktop" \
+    "$METADIR/VERSION" \
     >"$MANIFEST_FILE"
 
   if [[ -n "${DESKTOP_LINK_PATH:-}" && -L "$DESKTOP_LINK_PATH" ]]; then
@@ -271,6 +272,8 @@ do_install() {
   fi
   install_file 0755 "$SCRIPT_DIR/libexec/restart-to-macos-helper" \
     "$LIBEXECDIR/restart-to-macos-helper"
+  install_file 0644 "$SCRIPT_DIR/VERSION" \
+    "$METADIR/VERSION"
 
   render_template "$SCRIPT_DIR/share/applications/restart-to-macos.desktop.in" \
     "$tmpdir/restart-to-macos.desktop"

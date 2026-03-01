@@ -148,32 +148,51 @@ test_manual_update_and_uninstall() {
 test_health_check_success() {
   local dest="$TMP_ROOT/check-ok"
   local fakebin="$TMP_ROOT/check-ok-bin"
+  local home="$TMP_ROOT/check-ok-home"
   "$PROJECT_ROOT/install.sh" --destdir "$dest" --prefix /usr/local >/dev/null
   make_fake_gui "$fakebin"
   touch "$fakebin/asahi-bless" "$fakebin/pkexec" "$fakebin/systemctl"
   chmod +x "$fakebin/asahi-bless" "$fakebin/pkexec" "$fakebin/systemctl"
+  mkdir -p "$home/.local/share/applications"
+  ln -s "$dest/usr/local/share/applications/restart-to-macos.desktop" \
+    "$home/.local/share/applications/restart-to-macos.desktop"
 
   ASAHI_BLESS="$fakebin/asahi-bless" \
   PKEXEC="$fakebin/pkexec" \
   SYSTEMCTL="$fakebin/systemctl" \
+  HOME="$home" \
   PATH="$fakebin:$PATH" \
   "$dest/usr/local/bin/restart-to-macos" --check >/dev/null
 
   pass "health check success"
 }
 
+test_version_output() {
+  local dest="$TMP_ROOT/version"
+  local output
+  "$PROJECT_ROOT/install.sh" --destdir "$dest" --prefix /usr/local >/dev/null
+  output=$("$dest/usr/local/bin/restart-to-macos" --version)
+  [[ "$output" == "$VERSION" ]] || fail "expected version $VERSION, got $output"
+  pass "version output"
+}
+
 test_health_check_fails_without_gui() {
   local dest="$TMP_ROOT/check-no-gui"
   local fakebin="$TMP_ROOT/check-no-gui-bin"
+  local home="$TMP_ROOT/check-no-gui-home"
   local output="$TMP_ROOT/check-no-gui.out"
   "$PROJECT_ROOT/install.sh" --destdir "$dest" --prefix /usr/local >/dev/null
   make_fake_shell_runtime "$fakebin"
   touch "$fakebin/asahi-bless" "$fakebin/pkexec" "$fakebin/systemctl"
   chmod +x "$fakebin/asahi-bless" "$fakebin/pkexec" "$fakebin/systemctl"
+  mkdir -p "$home/.local/share/applications"
+  ln -s "$dest/usr/local/share/applications/restart-to-macos.desktop" \
+    "$home/.local/share/applications/restart-to-macos.desktop"
 
   if ASAHI_BLESS="$fakebin/asahi-bless" \
     PKEXEC="$fakebin/pkexec" \
     SYSTEMCTL="$fakebin/systemctl" \
+    HOME="$home" \
     PATH="$fakebin" \
     "$dest/usr/local/bin/restart-to-macos" --check >"$output" 2>&1; then
     fail "expected health check to fail without a GUI dialog backend"
@@ -187,6 +206,7 @@ test_symlinked_command_resolves_helper() {
   local dest="$TMP_ROOT/check-symlink"
   local fakebin="$TMP_ROOT/check-symlink-bin"
   local linked_prefix="$TMP_ROOT/linked-prefix"
+  local home="$TMP_ROOT/check-symlink-home"
   "$PROJECT_ROOT/install.sh" --destdir "$dest" --prefix /opt/restart-to-macos --package-build >/dev/null
   make_fake_gui "$fakebin"
   ln -sf /usr/bin/bash "$fakebin/bash"
@@ -194,15 +214,43 @@ test_symlinked_command_resolves_helper() {
   touch "$fakebin/asahi-bless" "$fakebin/pkexec" "$fakebin/systemctl"
   chmod +x "$fakebin/asahi-bless" "$fakebin/pkexec" "$fakebin/systemctl"
   mkdir -p "$linked_prefix/bin"
+  mkdir -p "$home/.local/share/applications"
   ln -sf "$dest/opt/restart-to-macos/bin/restart-to-macos" "$linked_prefix/bin/restart-to-macos"
+  ln -sf "$dest/opt/restart-to-macos/share/applications/restart-to-macos.desktop" \
+    "$home/.local/share/applications/restart-to-macos.desktop"
 
   ASAHI_BLESS="$fakebin/asahi-bless" \
   PKEXEC="$fakebin/pkexec" \
   SYSTEMCTL="$fakebin/systemctl" \
+  HOME="$home" \
   PATH="$fakebin:$PATH" \
   "$linked_prefix/bin/restart-to-macos" --check >/dev/null
 
   pass "symlinked command resolves helper"
+}
+
+test_health_check_reports_missing_desktop_link() {
+  local dest="$TMP_ROOT/check-no-link"
+  local fakebin="$TMP_ROOT/check-no-link-bin"
+  local home="$TMP_ROOT/check-no-link-home"
+  local output="$TMP_ROOT/check-no-link.out"
+  "$PROJECT_ROOT/install.sh" --destdir "$dest" --prefix /opt/restart-to-macos --package-build >/dev/null
+  make_fake_shell_runtime "$fakebin"
+  touch "$fakebin/asahi-bless" "$fakebin/pkexec" "$fakebin/systemctl"
+  chmod +x "$fakebin/asahi-bless" "$fakebin/pkexec" "$fakebin/systemctl"
+  mkdir -p "$home"
+
+  if ASAHI_BLESS="$fakebin/asahi-bless" \
+    PKEXEC="$fakebin/pkexec" \
+    SYSTEMCTL="$fakebin/systemctl" \
+    HOME="$home" \
+    PATH="$fakebin" \
+    "$dest/opt/restart-to-macos/bin/restart-to-macos" --check >"$output" 2>&1; then
+    fail "expected health check to fail without a user launcher entry"
+  fi
+
+  grep -Fq "no user launcher entry found" "$output" || fail "missing launcher entry guidance"
+  pass "health check reports missing desktop link"
 }
 
 test_desktop_and_policy_templates() {
@@ -228,8 +276,10 @@ main() {
   test_manual_install_creates_desktop_link
   test_manual_update_and_uninstall
   test_health_check_success
+  test_version_output
   test_health_check_fails_without_gui
   test_symlinked_command_resolves_helper
+  test_health_check_reports_missing_desktop_link
   test_desktop_and_policy_templates
 }
 
