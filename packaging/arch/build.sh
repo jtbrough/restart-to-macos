@@ -1,20 +1,20 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PROJECT_ROOT=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
+PROJECT_ROOT=$(CDPATH='' cd -- "$(dirname -- "$0")/../.." && pwd)
 VERSION=$(<"$PROJECT_ROOT/VERSION")
 PARENT_TMPDIR=${TMPDIR:-/tmp}
 TMP_ROOT=$(mktemp -d "$PARENT_TMPDIR/restart-to-macos-arch.XXXXXX")
 trap 'rm -rf -- "$TMP_ROOT"' EXIT
 
-STAGE="$TMP_ROOT/restart-to-macos-$VERSION"
 PKGDIR="$TMP_ROOT/pkg"
 SRCDEST="$TMP_ROOT/src"
 
 mkdir -p "$PKGDIR" "$SRCDEST"
-cp -a "$PROJECT_ROOT/." "$STAGE"
-rm -rf "$STAGE/.git"
-tar -C "$TMP_ROOT" -czf "$SRCDEST/restart-to-macos-$VERSION.tar.gz" "restart-to-macos-$VERSION"
+git -C "$PROJECT_ROOT" archive \
+  --format=tar.gz \
+  --prefix="restart-to-macos-$VERSION/" \
+  HEAD >"$SRCDEST/restart-to-macos-$VERSION.tar.gz"
 
 cp "$PROJECT_ROOT/packaging/arch/PKGBUILD" "$PKGDIR/PKGBUILD"
 sed -i "s|^pkgver=.*|pkgver=$VERSION|" "$PKGDIR/PKGBUILD"

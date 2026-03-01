@@ -264,25 +264,25 @@ do_install() {
 
   remove_manifest_files
 
-  install_file 0755 "$SCRIPT_DIR/bin/restart-to-macos" \
+  install_file 0755 "$SCRIPT_DIR/src/bin/restart-to-macos" \
     "$BINDIR/restart-to-macos"
   if [[ "$PACKAGE_BUILD" -eq 0 ]]; then
-    install_file 0755 "$SCRIPT_DIR/bin/restart-to-macos-uninstall" \
+    install_file 0755 "$SCRIPT_DIR/src/bin/restart-to-macos-uninstall" \
       "$BINDIR/restart-to-macos-uninstall"
   fi
-  install_file 0755 "$SCRIPT_DIR/libexec/restart-to-macos-helper" \
+  install_file 0755 "$SCRIPT_DIR/src/libexec/restart-to-macos-helper" \
     "$LIBEXECDIR/restart-to-macos-helper"
   install_file 0644 "$SCRIPT_DIR/VERSION" \
     "$METADIR/VERSION"
 
-  render_template "$SCRIPT_DIR/share/applications/restart-to-macos.desktop.in" \
+  render_template "$SCRIPT_DIR/src/share/applications/restart-to-macos.desktop.in" \
     "$tmpdir/restart-to-macos.desktop"
   install_file 0644 "$tmpdir/restart-to-macos.desktop" \
     "$APPLICATIONS_DIR/restart-to-macos.desktop"
   install_desktop_link
 
   if [[ "$INSTALL_POLKIT" -eq 1 ]]; then
-    render_template "$SCRIPT_DIR/share/polkit-1/actions/io.github.jtbrough.restart-to-macos.policy.in" \
+    render_template "$SCRIPT_DIR/src/share/polkit-1/actions/io.github.jtbrough.restart-to-macos.policy.in" \
       "$tmpdir/io.github.jtbrough.restart-to-macos.policy"
     install_file 0644 "$tmpdir/io.github.jtbrough.restart-to-macos.policy" \
       "$POLKIT_DIR/io.github.jtbrough.restart-to-macos.policy"

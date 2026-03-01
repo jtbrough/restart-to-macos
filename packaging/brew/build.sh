@@ -3,7 +3,7 @@ set -euo pipefail
 
 usage() {
   cat <<EOF
-Usage: scripts/render-brew-formula.sh VERSION SHA256
+Usage: packaging/brew/build.sh VERSION SHA256
 EOF
 }
 

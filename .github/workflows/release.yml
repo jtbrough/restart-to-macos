@@ -46,7 +46,7 @@ jobs:
             printf '%s\n' "$version" > VERSION
           fi
 
-          scripts/sync-version.sh
+          tools/sync-version.sh
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -242,7 +242,7 @@ jobs:
       - name: Render formula
         run: |
           mkdir -p homebrew-tap/Formula
-          scripts/render-brew-formula.sh \
+          packaging/brew/build.sh \
             "${{ needs.prepare.outputs.version }}" \
             "${{ needs.prepare.outputs.archive_sha256 }}" \
             > homebrew-tap/Formula/restart-to-macos.rb

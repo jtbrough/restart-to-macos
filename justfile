@@ -4,17 +4,17 @@ default:
   @just --list
 
 lint:
-  shellcheck install.sh bin/restart-to-macos bin/restart-to-macos-uninstall libexec/restart-to-macos-helper tests/*.sh scripts/*.sh
+  shellcheck install.sh src/bin/restart-to-macos src/bin/restart-to-macos-uninstall src/libexec/restart-to-macos-helper tests/*.sh tools/*.sh packaging/*/*.sh
   actionlint .github/workflows/ci.yml .github/workflows/release.yml
 
 validate-desktop:
   tmpdir="$(mktemp -d)"; trap 'rm -rf -- "$tmpdir"' EXIT; ./install.sh --destdir "$tmpdir" --prefix /usr --package-build; desktop-file-validate "$tmpdir/usr/share/applications/restart-to-macos.desktop"
 
 validate-policy:
-  xmllint --noout share/polkit-1/actions/io.github.jtbrough.restart-to-macos.policy.in
+  xmllint --noout src/share/polkit-1/actions/io.github.jtbrough.restart-to-macos.policy.in
 
 validate:
-  scripts/check-version-sync.sh
+  tools/check-version-sync.sh
   just validate-desktop
   just validate-policy
 
@@ -22,13 +22,13 @@ test:
   tests/test.sh
 
 build-arch:
-  tests/build-arch-package.sh
+  packaging/arch/build.sh
 
 build-fedora:
-  tests/build-fedora-package.sh
+  packaging/fedora/build.sh
 
 prepare-release:
-  scripts/prepare-release.sh
+  tools/prepare-release.sh
 
 ci:
   just lint

@@ -4,8 +4,6 @@
 *.rpm
 *.src.rpm
 pkg/
-src/
-results/
 dist/
 *.log
 *.pkg.tar

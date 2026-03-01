@@ -1,5 +1,5 @@
 Name:           restart-to-macos
-Version:        0.1.5
+Version:        0.1.6
 Release:        1%{?dist}
 Summary:        One-time restart into macOS for Asahi Linux systems
 
@@ -37,5 +37,5 @@ Linux users who want a one-time restart into macOS from a graphical desktop.
 %{_datadir}/restart-to-macos/VERSION
 
 %changelog
-* Sun Mar 01 2026 Jordan Brough <jtbrough@users.noreply.github.com> - 0.1.5-1
+* Sun Mar 01 2026 Jordan Brough <jtbrough@users.noreply.github.com> - 0.1.6-1
 - Initial package

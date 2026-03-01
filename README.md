@@ -83,6 +83,13 @@ restart-to-macos
 
 ## Development
 
+Project layout:
+
+- `src/`: installable payload
+- `packaging/`: Arch, Fedora, and Brew packaging
+- `tests/`: test suite
+- `tools/`: release and validation helpers
+
 ```bash
 just lint
 just validate

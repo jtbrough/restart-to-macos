@@ -267,7 +267,7 @@ test_desktop_and_policy_templates() {
     "Exec=/opt/restart-to-macos/bin/restart-to-macos"
   assert_contains "$dest/opt/restart-to-macos/share/polkit-1/actions/io.github.jtbrough.restart-to-macos.policy" \
     "/opt/restart-to-macos/libexec/restart-to-macos-helper"
-  "$PROJECT_ROOT/scripts/render-brew-formula.sh" "$VERSION" "deadbeef" >"$formula"
+  "$PROJECT_ROOT/packaging/brew/build.sh" "$VERSION" "deadbeef" >"$formula"
   assert_contains "$formula" "def post_install"
   assert_contains "$formula" "def uninstall"
   assert_contains "$formula" 'desktop_target.make_symlink(desktop_source)'

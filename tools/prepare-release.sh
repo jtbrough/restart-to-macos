@@ -12,7 +12,7 @@ trap 'rm -rf -- "$TMP_ROOT"' EXIT
 
 usage() {
   cat <<EOF
-Usage: scripts/prepare-release.sh [--tarball-url URL]
+Usage: tools/prepare-release.sh [--tarball-url URL]
 
 Downloads the release tarball for the current VERSION, computes its SHA256,
 and updates packaging/arch/PKGBUILD in place.
@@ -63,7 +63,7 @@ main() {
 
   parse_args "$@"
   require_tools
-  "$PROJECT_ROOT/scripts/sync-version.sh"
+  "$PROJECT_ROOT/tools/sync-version.sh"
 
   tarball="$TMP_ROOT/restart-to-macos-$VERSION.tar.gz"
   download_tarball "$tarball"
