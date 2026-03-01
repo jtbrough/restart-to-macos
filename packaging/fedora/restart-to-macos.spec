@@ -37,5 +37,5 @@ Linux users who want a one-time restart into macOS from a graphical desktop.
 %{_datadir}/restart-to-macos/VERSION
 
 %changelog
-* Sat Feb 28 2026 Jordan Brough <jtbrough@users.noreply.github.com> - 0.1.5-1
+* Sun Mar 01 2026 Jordan Brough <jtbrough@users.noreply.github.com> - 0.1.5-1
 - Initial package
