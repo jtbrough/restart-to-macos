@@ -1,0 +1,90 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build, publish release and update tap
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: https://data.forgejo.org/actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build release archive
+        id: archive
+        run: |
+          set -euo pipefail
+          version="$(cat VERSION)"
+          tag="${GITHUB_REF_NAME:-v${version}}"
+          if [[ "$tag" =~ ^v[0-9] ]]; then
+            version="${tag#v}"
+          fi
+          archive_name="restart-to-macos-${version}.tar.gz"
+          git archive --format=tar.gz --prefix="restart-to-macos-${version}/" HEAD > "$archive_name"
+          archive_sha256="$(sha256sum "$archive_name" | awk '{print $1}')"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+          echo "archive_name=${archive_name}" >> "$GITHUB_OUTPUT"
+          echo "archive_sha256=${archive_sha256}" >> "$GITHUB_OUTPUT"
+
+      - name: Publish Forgejo release asset
+        env:
+          GITEA_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ steps.archive.outputs.tag }}
+          ARCHIVE_NAME: ${{ steps.archive.outputs.archive_name }}
+        run: |
+          set -euo pipefail
+          api="${{ github.server_url }}/api/v1/repos/${{ github.repository }}"
+          if release_json=$(curl -fsS \
+            -H "Authorization: token ${GITEA_TOKEN}" \
+            "${api}/releases/tags/${TAG_NAME}"); then
+            release_id=$(python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])' <<<"${release_json}")
+          else
+            release_json=$(curl -fsS -X POST "${api}/releases" \
+              -H "Authorization: token ${GITEA_TOKEN}" \
+              -H "Content-Type: application/json" \
+              -d "{\"tag_name\": \"${TAG_NAME}\", \"name\": \"restart-to-macos ${TAG_NAME}\", \"body\": \"Assets:\n\n- source tarball\"}")
+            release_id=$(python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])' <<<"${release_json}")
+          fi
+
+          asset_id=$(python3 -c \
+            'import json,sys; print(next((a["id"] for a in json.load(sys.stdin).get("assets",[]) if a["name"] == sys.argv[1]), ""))' \
+            "${ARCHIVE_NAME}" <<<"${release_json}")
+          if [ -n "${asset_id}" ]; then
+            curl -fsS -X DELETE "${api}/releases/${release_id}/assets/${asset_id}" \
+              -H "Authorization: token ${GITEA_TOKEN}" >/dev/null
+          fi
+          curl -fsS -X POST "${api}/releases/${release_id}/assets?name=${ARCHIVE_NAME}" \
+            -H "Authorization: token ${GITEA_TOKEN}" \
+            -F "attachment=@${ARCHIVE_NAME}" >/dev/null
+
+      - name: Update Homebrew tap formula
+        if: env.TAP_TOKEN != ''
+        env:
+          TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          TAP_USERNAME: jordan
+          VERSION: ${{ steps.archive.outputs.version }}
+          SHA256: ${{ steps.archive.outputs.archive_sha256 }}
+        run: |
+          set -euo pipefail
+          auth_header="Authorization: basic $(printf '%s:%s' "$TAP_USERNAME" "$TAP_TOKEN" | base64 -w0)"
+          git -c http.extraHeader="$auth_header" clone --branch main \
+            "https://git.home.brough.org/jordan/homebrew-tap.git" homebrew-tap
+          packaging/brew/build.sh "$VERSION" "$SHA256" > homebrew-tap/Formula/restart-to-macos.rb
+          git -C homebrew-tap config user.name "Forgejo Actions"
+          git -C homebrew-tap config user.email "forgejo-actions@users.noreply.git.home.brough.org"
+          git -C homebrew-tap add Formula/restart-to-macos.rb
+          if ! git -C homebrew-tap diff --cached --quiet; then
+            git -C homebrew-tap commit -m "feat: update restart-to-macos to ${VERSION}"
+            git -c http.extraHeader="$auth_header" -C homebrew-tap push origin HEAD:main
+          fi

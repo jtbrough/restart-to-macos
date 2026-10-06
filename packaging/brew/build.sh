@@ -29,8 +29,8 @@ cat <<EOF
 
 class RestartToMacos < Formula
   desc "Simple CLI and desktop launcher for one-time restart into macOS on Asahi Linux"
-  homepage "https://github.com/jtbrough/restart-to-macos"
-  url "https://github.com/jtbrough/restart-to-macos/releases/download/v${version}/restart-to-macos-${version}.tar.gz"
+  homepage "https://git.home.brough.org/jordan/restart-to-macos"
+  url "https://git.home.brough.org/jordan/restart-to-macos/releases/download/v${version}/restart-to-macos-${version}.tar.gz"
   sha256 "${sha256}"
   license "MIT"
 
