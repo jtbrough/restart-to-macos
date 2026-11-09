@@ -14,5 +14,7 @@ if [[ ! -x "$SYSTEMCTL" ]]; then
   exit 1
 fi
 
-"$ASAHI_BLESS" --next --set-boot-macos -y
+if ! "$ASAHI_BLESS" --next --set-boot-macos -y 2>/dev/null; then
+  "$ASAHI_BLESS" --next --set-boot "macOS" -y
+fi
 exec "$SYSTEMCTL" reboot

@@ -273,6 +273,32 @@ test_desktop_and_policy_templates() {
   assert_contains "$formula" 'desktop_target.make_symlink(desktop_source)'
   pass "template rendering"
 }
+test_helper_fallback() {
+  local dir="$TMP_ROOT/helper-test"
+  local log="$dir/calls.log"
+  mkdir -p "$dir"
+  cat >"$dir/fake-bless" <<EOF
+#!/usr/bin/env bash
+echo "\$*" >> "$log"
+if [[ "\$*" == *"--set-boot-macos"* ]]; then
+  exit 1
+fi
+exit 0
+EOF
+  chmod +x "$dir/fake-bless"
+
+  cat >"$dir/fake-systemctl" <<'EOF'
+#!/usr/bin/env bash
+exit 0
+EOF
+  chmod +x "$dir/fake-systemctl"
+
+  ASAHI_BLESS="$dir/fake-bless" SYSTEMCTL="$dir/fake-systemctl" "$PROJECT_ROOT/src/libexec/restart-to-macos-helper"
+  assert_contains "$log" "--next --set-boot-macos -y"
+  assert_contains "$log" "--next --set-boot macOS -y"
+  pass "helper falls back to macOS when set-boot-macos fails"
+}
+
 
 main() {
   test_manual_install_layout
@@ -287,6 +313,7 @@ main() {
   test_symlinked_command_resolves_helper
   test_health_check_reports_missing_desktop_link
   test_desktop_and_policy_templates
+  test_helper_fallback
 }
 
 main "$@"
